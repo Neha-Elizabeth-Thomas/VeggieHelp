@@ -1,10 +1,9 @@
 
-import { Routes ,Route} from 'react-router-dom'
-import Dashboard from './pages/Dashboard'
+import { Route, Routes } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import AddListing from './pages/AddListing'
-import BuyerRegister from './pages/BuyerRegister'
-import BuyerAlerts from './pages/BuyerAlerts'
+import Dashboard from './pages/Dashboard'
+import RegisterFarmer from './pages/RegisterFarmer'
 
 function App() {
   
@@ -14,8 +13,7 @@ function App() {
       <Routes>
         <Route path='/' element={<Dashboard/>}/>
         <Route path='/add-listing' element={<AddListing/>}/>
-        <Route path='/buyers' element={<BuyerRegister/>}/>
-        <Route path='/alerts' element={<BuyerAlerts/>}/>
+        <Route path='/register' element={<RegisterFarmer/>}/>
       </Routes>
     </div>
   )
