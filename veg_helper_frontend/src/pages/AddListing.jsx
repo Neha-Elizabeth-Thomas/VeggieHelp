@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ChatBox from '../components/ChatBox';
 
 const AddListing = () => {
   const [formData, setFormData] = useState({ 
@@ -62,7 +63,8 @@ const AddListing = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 my-8">
+    <div className="flex flex-col md:flex-row gap-6 p-6">
+      <div className="md:w-2/3 w-full">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Add Surplus Produce</h2>
         <p className="text-gray-600 mt-1">List your extra produce to connect with buyers</p>
@@ -183,6 +185,11 @@ const AddListing = () => {
           </div>
         )}
       </form>
+      </div>
+
+      <div className="md:w-1/3 w-full">
+      <ChatBox />
+    </div>
     </div>
   );
 };
