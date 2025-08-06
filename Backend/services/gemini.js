@@ -59,3 +59,44 @@ export const analyzeProduceWithGemini = async (farmerText, imageUrl, location) =
     throw new Error('Failed to analyze produce with Gemini API.');
   }
 };
+
+/**
+ * Generates a chatbot response using Gemini-Pro.
+ * @param {Array<object>} history - The conversation history.
+ * @param {string} newMessage - The new message from the user.
+ * @returns {Promise<string>} A promise that resolves to the chatbot's text response.
+ */
+export const getChatbotResponse = async (history, newMessage) => {
+  // Use the text-only model for chat
+  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+  // Construct the conversation history in the format Gemini expects
+  const contents = history.map(msg => ({
+    role: msg.from === 'farmer' ? 'user' : 'model',
+    parts: [{ text: msg.text }],
+  }));
+
+  // Add the new user message
+  contents.push({
+    role: 'user',
+    parts: [{ text: newMessage }],
+  });
+
+  const systemInstruction = {
+    role: 'system',
+    parts: [{text: `You are a helpful and friendly assistant for the "SubziSahayak" platform. Your goal is to help Indian farmers and buyers. Keep your responses concise and clear.`}]
+  }
+
+  const requestBody = {
+    contents,
+    systemInstruction,
+  };
+
+  try {
+    const response = await axios.post(GEMINI_API_URL, requestBody);
+    return response.data.candidates[0].content.parts[0].text;
+  } catch (error) {
+    console.error("Error calling Gemini Chat API:", error.response ? error.response.data : error.message);
+    throw new Error('Failed to get chatbot response from Gemini API.');
+  }
+};
