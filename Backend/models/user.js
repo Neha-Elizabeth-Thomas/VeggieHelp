@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema({
     // 'userType' helps us differentiate between the two types of users.
     userType: { 
         type: String, 
-        enum: ['farmer', 'buyer'], // The value must be one of these two options
+        enum: ['farmer', 'buyer','admin'], // The value must be one of these two options
         required: true 
     },
     // We use the GeoJSON Point format for efficient location queries.
@@ -32,6 +32,7 @@ const userSchema = new mongoose.Schema({
             required: true
         }
     },
+    password: { type: String, required: true },
     // This field is only relevant for buyers.
     needs: {
         type: [String], // An array of strings, e.g., ["tomato", "onion"]
@@ -42,6 +43,18 @@ const userSchema = new mongoose.Schema({
     timestamps: true 
 });
 
+userSchema.pre('save', async function (next) {
+    if (!this.isModified('password')) {
+        return next();
+    }
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+});
+
+// Method to compare entered password with the hashed password in the DB
+userSchema.methods.matchPassword = async function (enteredPassword) {
+    return await bcrypt.compare(enteredPassword, this.password);
+};
 // This special index is required by MongoDB to perform geospatial queries.
 userSchema.index({ location: '2dsphere' });
 

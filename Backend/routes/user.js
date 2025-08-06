@@ -1,11 +1,23 @@
 import express from 'express';
-import { registerUser } from '../controllers/user.js';
+import { 
+    registerUser,
+    loginUser,
+    logoutUser,
+    getUserProfile
+} from '../controllers/user.js';
+import { protect } from '../middlewares/auth.js';
 
-// A router object is an isolated instance of middleware and routes.
 const router = express.Router();
 
-// When a POST request is made to the root of this router (which will be /api/users),
-// the registerUser controller function will be executed.
-router.post('/', registerUser);
+// Public routes
+router.post('/register', registerUser);
+router.post('/login', loginUser);
+router.post('/logout', logoutUser);
+
+// Protected route
+// When a GET request is made to /api/users/profile, it first runs the `protect` middleware.
+// If the user is authenticated, it then proceeds to the `getUserProfile` controller.
+router.get('/profile', protect, getUserProfile);
+
 
 export default router;
