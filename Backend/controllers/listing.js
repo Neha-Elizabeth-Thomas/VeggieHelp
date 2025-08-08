@@ -51,29 +51,35 @@ export const analyzeListing = async (req, res) => {
  * @access  Private/Farmer
  */
 export const createListing = async (req, res) => {
-    // Data received from the frontend after farmer confirms the AI's analysis
-    const { produceItem, quantity, unit, price, imageUrl } = req.body;
+    // --- CORRECTED: Destructure all fields from the request body ---
+    const { 
+        produceItem, quantity, unit, price, imageUrl, 
+        aiQualityAssessment, aiGeneratedAd 
+    } = req.body;
 
-    if (!produceItem || !quantity || !unit || !price || !imageUrl) {
-        return res.status(400).json({ message: 'All listing details are required.' });
-    }
-
+    // Validation for core fields
+    if (!produceItem) return res.status(400).json({ message: 'Produce item is missing.' });
+    if (!quantity) return res.status(400).json({ message: 'Quantity is missing.' });
+    if (!unit) return res.status(400).json({ message: 'Unit is missing.' });
+    if (!price) return res.status(400).json({ message: 'Price is missing.' });
+    if (!imageUrl) return res.status(400).json({ message: 'Image URL is missing.' });
+    
     try {
         const listing = new Listing({
-            farmer: req.user._id, // from 'protect' middleware
+            farmer: req.user._id,
             produceItem,
             quantity,
             unit,
-            price, // This would be the confirmed price
+            price,
             imageUrl,
-            location: req.user.location, // Copy location from farmer's profile
+            location: req.user.location,
+            // --- CORRECTED: Save the new AI fields to the database ---
+            aiQualityAssessment,
+            aiGeneratedAd,
         });
-
         const createdListing = await listing.save();
         res.status(201).json(createdListing);
-
     } catch (error) {
-        console.error(error);
         res.status(500).json({ message: 'Server error while creating listing.' });
     }
 };

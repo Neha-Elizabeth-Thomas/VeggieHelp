@@ -4,6 +4,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import api from '../services/api';
 
 const Header = () => {
   const { userInfo, logout: authLogout } = useAuth();
@@ -39,7 +40,7 @@ const Header = () => {
       <nav className="container mx-auto px-6 py-3">
         <div className="flex items-center justify-between">
           <Link to={userInfo ? (userInfo.userType === 'farmer' ? '/farmer/dashboard' : '/buyer/dashboard') : '/'} className="text-2xl font-bold text-green-600">
-            SubziSahayak
+            VeggieHelp
           </Link>
           
           <div className="flex items-center space-x-4">
