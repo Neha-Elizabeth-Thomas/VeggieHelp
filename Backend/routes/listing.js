@@ -1,5 +1,5 @@
 import express from 'express';
-import { analyzeListing, createListing } from '../controllers/listing.js';
+import { analyzeListing, createListing , getMyListings ,getNearbyListings} from '../controllers/listing.js';
 import { protect, farmerOnly } from '../middlewares/auth.js';
 import upload from '../middlewares/upload.js';
 
@@ -11,5 +11,8 @@ router.post('/analyze', protect, farmerOnly, upload.single('image'), analyzeList
 
 // Route to finally create the listing in the database after farmer confirms.
 router.post('/', protect, farmerOnly, createListing);
+
+router.get('/my-listings', protect, farmerOnly, getMyListings);
+router.get('/nearby', protect, getNearbyListings); 
 
 export default router;

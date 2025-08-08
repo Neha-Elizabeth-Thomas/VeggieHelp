@@ -9,10 +9,18 @@ import apiRoutes from './routes/index.js';
 connectDB(); // Call the function to establish the connection
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+  // This must be the exact origin of your frontend application
+  origin: 'http://localhost:5173', 
+  // This is crucial for allowing cookies to be sent with requests
+  credentials: true, 
+};
+
+// 3. Use the cors middleware with your options
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/api', apiRoutes);

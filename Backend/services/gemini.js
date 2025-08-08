@@ -8,46 +8,50 @@ import axios from 'axios';
  * @returns {Promise<object>} A promise that resolves to the structured JSON object from Gemini.
  */
 export const analyzeProduceWithGemini = async (farmerText, imageUrl, location) => {
-  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  
   const formattedDate = new Date().toLocaleDateString('en-IN', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
-  // The prompt now dynamically uses the farmer's location coordinates.
-  const prompt = `
-    You are an expert agricultural analyst for the "VeggieHelp" platform in India.
-    Analyze the provided user text and image. The farmer's location coordinates are [longitude, latitude]: [${location.coordinates[0]}, ${location.coordinates[1]}]. The current date is ${formattedDate}.
 
+  // --- MODIFIED PROMPT ---
+  const prompt = `
+    Analyze the user's text and the provided image of produce.
+    The user is a farmer in India.
+    The farmer's location coordinates are [longitude, latitude]: [${location.coordinates[0]}, ${location.coordinates[1]}].
+    The current date is ${formattedDate}.
     User Text: "${farmerText}"
 
-    Based on all the information, perform the following tasks and provide the output ONLY as a single, valid JSON object with no extra text or markdown:
-
-    1. "categorizeProduct": Extract the produce item, quantity, and unit from the text.
-    2. "assessQuality": Analyze the image at the provided URL and write a brief, one-sentence quality assessment.
-    3. "suggestPrice": Based on the product, its quality, and current market trends for the provided location coordinates, suggest a fair market price per unit in INR.
-    4. "generateAd": Write a short, catchy advertisement (20-25 words) in English with some Malayalam to attract local buyers.
+    Perform these tasks and respond ONLY with a single, valid JSON object:
+    1. "categorizeProduct": An object containing three keys: "produceItem" (e.g., "tomato"), "quantity" (e.g., 50), and "unit" (e.g., "kg").
+    2. "assessQuality": A brief, one-sentence quality assessment of the produce in the image.
+    3. "suggestPrice": A suggested fair market price per unit in INR, as a number.
+    4. "generateAd": A short, catchy advertisement (20-25 words) in Hinglish for local buyers.
   `;
 
-  const requestBody = {
-    contents: [
-      {
-        parts: [
-          { text: prompt },
-          {
-            inline_data: {
-              mime_type: "image/jpeg", // Assuming JPEG, can be made dynamic
-              data: await axios.get(imageUrl, { responseType: 'arraybuffer' }).then(res => Buffer.from(res.data, 'binary').toString('base64'))
-            }
-          }
-        ]
-      }
-    ]
-  };
-
   try {
+    const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const imageBase64 = Buffer.from(imageResponse.data, 'binary').toString('base64');
+
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            { text: prompt },
+            {
+              inline_data: {
+                mime_type: "image/jpeg",
+                data: imageBase64
+              }
+            }
+          ]
+        }
+      ]
+    };
+
     const response = await axios.post(GEMINI_API_URL, requestBody);
-    // The Gemini response is often wrapped in markdown, so we clean it.
     const rawJson = response.data.candidates[0].content.parts[0].text
         .replace(/```json/g, '')
         .replace(/```/g, '')
@@ -68,7 +72,7 @@ export const analyzeProduceWithGemini = async (farmerText, imageUrl, location) =
  */
 export const getChatbotResponse = async (history, newMessage) => {
   // Use the text-only model for chat
-  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
   // Construct the conversation history in the format Gemini expects
   const contents = history.map(msg => ({

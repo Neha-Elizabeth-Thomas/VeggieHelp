@@ -77,3 +77,43 @@ export const createListing = async (req, res) => {
         res.status(500).json({ message: 'Server error while creating listing.' });
     }
 };
+
+/**
+ * @desc    Get listings for the logged-in farmer
+ * @route   GET /api/listings/my-listings
+ * @access  Private/Farmer
+ */
+export const getMyListings = async (req, res) => {
+    try {
+        // req.user._id is available from the 'protect' middleware.
+        // This finds all listings where the 'farmer' field matches the logged-in user's ID.
+        const listings = await Listing.find({ farmer: req.user._id }).sort({ createdAt: -1 });
+        res.status(200).json(listings);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error while fetching listings.' });
+    }
+};
+
+export const getNearbyListings = async (req, res) => {
+    try {
+        const buyerLocation = req.user.location;
+        // Search radius in meters (e.g., 10 kilometers)
+        const searchRadius = 150 * 1000; 
+
+        const nearbyListings = await Listing.find({
+            status: 'available',
+            location: {
+                $near: {
+                    $geometry: buyerLocation,
+                    $maxDistance: searchRadius,
+                },
+            },
+        }).populate('farmer', 'name'); // Also fetch the farmer's name
+
+        res.status(200).json(nearbyListings);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error while fetching nearby listings.' });
+    }
+};

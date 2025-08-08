@@ -1,4 +1,5 @@
 import User from '../models/user.js';
+import generateToken from '../utils/generateToken.js';
 
 /**
  * @desc    Register a new user (farmer or buyer)
@@ -6,45 +7,52 @@ import User from '../models/user.js';
  * @access  Public
  */
 export const registerUser = async (req, res) => {
-  // Extract data from the request body
-  const { name,email, userType, location } = req.body;
+  // Destructure all fields from the request body
+  const { 
+    name, email, password, userType, location,
+    phone, village, district, state, pincode,
+    aadhaar, landSize, produceTypes 
+  } = req.body;
 
-  // Basic validation
-  if (!name ||!email || !userType || !location || !location.coordinates) {
-    return res.status(400).json({ message: 'Please provide all required fields: name, userType, and location with coordinates.' });
+  // Core validation
+  if (!name || !email || !password || !userType || !location) {
+    return res.status(400).json({ message: 'Core user information is missing.' });
   }
 
   try {
-    // Check if a user with the same name and type already exists to prevent duplicates
-    const userExists = await User.findOne({ email, userType });
-
+    const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(409).json({ message: 'A user with this name and role already exists.' });
+      return res.status(409).json({ message: 'User with this email already exists.' });
     }
 
-    // Create a new user instance using the User model
+    // Create the new user with all the provided data
     const user = await User.create({
       name,
       email,
+      password,
       userType,
       location,
+      phone,
+      address: { village, district, state, pincode },
+      aadhaar,
+      landSize,
+      produceTypes,
     });
 
-    // If the user is created successfully, send back the user's data
     if (user) {
+      generateToken(res, user._id); // Generate JWT and set cookie for auto-login
       res.status(201).json({
         _id: user._id,
         name: user.name,
-        email:user.email,
+        email: user.email,
         userType: user.userType,
-        location: user.location,
       });
     } else {
-      res.status(400).json({ message: 'Invalid user data received.' });
+      res.status(400).json({ message: 'Invalid user data.' });
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error during user registration.' });
+    res.status(500).json({ message: 'Server error during registration.' });
   }
 };
 
@@ -99,14 +107,24 @@ export const logoutUser = (req, res) => {
  */
 export const getUserProfile = async (req, res) => {
     // The `protect` middleware already found the user and attached it to the request object.
+    // req.user contains all the fields from the User model (except the password).
     const user = req.user;
 
     if (user) {
+        // Send the complete user object back to the frontend.
+        // This includes all the farmer-specific details.
         res.status(200).json({
             _id: user._id,
             name: user.name,
             email: user.email,
             userType: user.userType,
+            phone: user.phone,
+            address: user.address,
+            aadhaar: user.aadhaar,
+            landSize: user.landSize,
+            produceTypes: user.produceTypes,
+            location: user.location,
+            createdAt: user.createdAt,
         });
     } else {
         res.status(404).json({ message: 'User not found.' });

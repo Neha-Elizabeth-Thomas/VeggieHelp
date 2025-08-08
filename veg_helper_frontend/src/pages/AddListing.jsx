@@ -1,195 +1,197 @@
+// File: client/src/pages/AddListing.jsx
+
 import React, { useState } from 'react';
+import api from '../services/api';
 import ChatBox from '../components/ChatBox';
 
 const AddListing = () => {
-  const [formData, setFormData] = useState({ 
-    produce: '', 
-    quantity: '', 
-    price: '',
-    image: null,
-    imagePreview: null
-  });
+  // State for the initial form (Step 1)
+  const [text, setText] = useState('');
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  // State for the confirmation data (Step 2)
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [price, setPrice] = useState(''); // Allow farmer to edit the suggested price
+
+  // UI/UX State
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: '' });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setFormData({
-        ...formData,
-        image: file,
-        imagePreview: URL.createObjectURL(file)
-      });
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
-  const handleSubmit = async (e) => {
+  // --- Step 1: Handle AI Analysis ---
+  const handleAnalyze = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setMessage({ text: '', type: '' });
+    if (!text || !image) {
+      setError('Please provide a description and an image.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setError('');
+    setSuccess('');
+
+    const formData = new FormData();
+    formData.append('text', text);
+    formData.append('image', image);
 
     try {
-      const data = new FormData();
-      data.append('produce', formData.produce);
-      data.append('quantity', formData.quantity);
-      data.append('price', formData.price);
-      data.append('image', formData.image);
-
-      const res = await fetch('/api/listing', {
-        method: 'POST',
-        body: data,
+      const response = await api.post('/listings/analyze', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
-      
-      const result = await res.json();
-      
-      if (res.ok) {
-        setMessage({ text: result.message || 'Listing added successfully!', type: 'success' });
-        // Reset form on success
-        setFormData({ 
-          produce: '', 
-          quantity: '', 
-          price: '',
-          image: null,
-          imagePreview: null
-        });
-      } else {
-        setMessage({ text: result.message || 'Error adding listing', type: 'error' });
-      }
-    } catch (error) {
-      setMessage({ text: 'Network error. Please try again.', type: 'error' });
+      setAnalysisResult(response.data);
+      setPrice(response.data.suggestPrice); // Set initial price from AI suggestion
+    } catch (err) {
+      setError(err.response?.data?.message || 'Analysis failed. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // --- Step 2: Handle Final Submission ---
+  const handleFinalSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+    setSuccess('');
+
+    // --- CORRECTED: Standardized on produceItem ---
+    const finalData = {
+      produceItem: analysisResult.categorizeProduct.produceItem, // Corrected property name
+      quantity: analysisResult.categorizeProduct.quantity,
+      unit: analysisResult.categorizeProduct.unit,
+      price: price, // Use the potentially edited price
+      imageUrl: analysisResult.imageUrl,
+      aiQualityAssessment: analysisResult.assessQuality,
+      aiGeneratedAd: analysisResult.generateAd,
+    };
+
+    try {
+      await api.post('/listings', finalData);
+      setSuccess('Your listing has been posted successfully!');
+      handleReset();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create listing.');
     } finally {
       setIsSubmitting(false);
     }
   };
+  
+  const handleReset = () => {
+    setText('');
+    setImage(null);
+    setImagePreview(null);
+    setAnalysisResult(null);
+    setPrice('');
+    setError('');
+    setTimeout(() => setSuccess(''), 5000);
+  };
 
+  // --- Render Logic ---
   return (
     <div className="flex flex-col md:flex-row gap-6 p-6">
       <div className="md:w-2/3 w-full">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Add Surplus Produce</h2>
-        <p className="text-gray-600 mt-1">List your extra produce to connect with buyers</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Image Upload Preview */}
-        <div className="flex flex-col items-center">
-          <div className="relative w-32 h-32 mb-4 rounded-lg overflow-hidden border-2 border-dashed border-gray-300">
-            {formData.imagePreview ? (
-              <img 
-                src={formData.imagePreview} 
-                alt="Preview" 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-            )}
-          </div>
+        <div className="bg-white p-8 rounded-lg shadow-md">
           
-          <label className="cursor-pointer bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-lg font-medium transition-colors duration-300 flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            Upload Image
-            <input 
-              type="file" 
-              accept="image/*" 
-              className="hidden" 
-              onChange={handleImageChange}
-              required 
-            />
-          </label>
-        </div>
-
-        {/* Produce Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Produce Name</label>
-          <div className="relative">
-            <input 
-              type="text" 
-              placeholder="e.g. Tomatoes, Apples, etc." 
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-              value={formData.produce}
-              onChange={e => setFormData({ ...formData, produce: e.target.value })}
-              required 
-            />
-          </div>
-        </div>
-
-        {/* Quantity and Price */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity (kg)</label>
-            <input 
-              type="number" 
-              placeholder="0" 
-              min="1"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-              value={formData.quantity}
-              onChange={e => setFormData({ ...formData, quantity: e.target.value })}
-              required 
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹/kg)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-2 text-gray-500">₹</span>
-              <input 
-                type="number" 
-                placeholder="0" 
-                min="1"
-                className="w-full pl-8 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-                value={formData.price}
-                onChange={e => setFormData({ ...formData, price: e.target.value })}
-                required 
-              />
+          {!analysisResult ? (
+            // --- STEP 1: ANALYSIS FORM ---
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 text-center">Create a New Listing</h2>
+              <p className="text-gray-600 mt-1 text-center mb-6">Describe your produce, and our AI will do the rest!</p>
+              <form onSubmit={handleAnalyze} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Description</label>
+                  <textarea
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder="e.g., '30 kilo badiya tamatar hai, aaj hi toda'"
+                    className="w-full p-3 border border-gray-300 rounded-md"
+                    rows="3"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Image</label>
+                  <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div className="space-y-1 text-center">
+                      {imagePreview ? (
+                        <img src={imagePreview} alt="Preview" className="mx-auto h-24 w-24 object-cover rounded-md" />
+                      ) : (
+                        <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      )}
+                      <div className="flex text-sm text-gray-600">
+                        <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-green-600 hover:text-green-500 focus-within:outline-none">
+                          <span>Upload a file</span>
+                          <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleImageChange} required />
+                        </label>
+                        <p className="pl-1">or drag and drop</p>
+                      </div>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                    </div>
+                  </div>
+                </div>
+                <button type="submit" disabled={isAnalyzing} className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md disabled:opacity-70">
+                  {isAnalyzing ? 'Analyzing...' : 'Analyze Listing'}
+                </button>
+              </form>
             </div>
-          </div>
-        </div>
-
-        {/* Submit Button */}
-        <button 
-          type="submit" 
-          disabled={isSubmitting}
-          className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-colors duration-300 flex items-center justify-center gap-2 ${
-            isSubmitting ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
-          }`}
-        >
-          {isSubmitting ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Processing...
-            </>
           ) : (
-            <>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Listing
-            </>
+            // --- STEP 2: CONFIRMATION FORM ---
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 text-center">Confirm Your Listing</h2>
+              <p className="text-gray-600 mt-1 text-center mb-6">Our AI has prepared this listing. Please review and confirm.</p>
+              <form onSubmit={handleFinalSubmit} className="space-y-6">
+                <div className="text-center">
+                    <img src={analysisResult.imageUrl} alt="Produce" className="mx-auto h-32 w-32 object-cover rounded-lg shadow-md" />
+                </div>
+                <div>
+                    <h3 className="text-lg font-medium text-gray-900">Categorized Product</h3>
+                    <p className="text-gray-700 capitalize">{analysisResult.categorizeProduct.quantity} {analysisResult.categorizeProduct.unit} of {analysisResult.categorizeProduct.produceItem}</p>
+                </div>
+                 <div>
+                    <h3 className="text-lg font-medium text-gray-900">AI Quality Assessment</h3>
+                    <p className="text-gray-700 italic">"{analysisResult.assessQuality}"</p>
+                </div>
+                <div>
+                    <h3 className="text-lg font-medium text-gray-900">Suggested Ad</h3>
+                    <p className="text-gray-700 bg-gray-50 p-3 rounded-md">"{analysisResult.generateAd}"</p>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Price (₹ / {analysisResult.categorizeProduct.unit})</label>
+                    <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full p-3 border border-gray-300 rounded-md" required />
+                </div>
+                <div className="flex gap-4">
+                    <button type="button" onClick={handleReset} className="w-full py-3 px-4 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-md">
+                        Start Over
+                    </button>
+                    <button type="submit" disabled={isSubmitting} className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md disabled:opacity-70">
+                        {isSubmitting ? 'Posting...' : 'Confirm & Post Listing'}
+                    </button>
+                </div>
+              </form>
+            </div>
           )}
-        </button>
+          
+          {/* --- Universal Error/Success Messages --- */}
+          {error && <div className="mt-4 p-3 rounded-lg bg-red-100 text-red-800">{error}</div>}
+          {success && <div className="mt-4 p-3 rounded-lg bg-green-100 text-green-800">{success}</div>}
 
-        {/* Message */}
-        {message.text && (
-          <div className={`mt-4 p-3 rounded-lg ${
-            message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}>
-            {message.text}
-          </div>
-        )}
-      </form>
+        </div>
       </div>
-
       <div className="md:w-1/3 w-full">
-      <ChatBox />
-    </div>
+        <ChatBox />
+      </div>
     </div>
   );
 };
