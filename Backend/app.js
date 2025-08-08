@@ -14,7 +14,10 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 const corsOptions = {
   // This must be the exact origin of your frontend application
-  origin: 'http://localhost:5173', 
+  origin: [
+    'http://localhost:5173', // Your Vite dev server
+    'https://veggie-help.vercel.app/', // Production frontend
+  ],
   // This is crucial for allowing cookies to be sent with requests
   credentials: true, 
 };
