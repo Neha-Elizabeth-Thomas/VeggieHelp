@@ -11,19 +11,26 @@ connectDB(); // Call the function to establish the connection
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+const allowedOrigins = [
+  'http://localhost:5173', // Your local frontend for development
+  'https://veggie-help.vercel.app' // Your live Vercel frontend URL
+];
+
 const corsOptions = {
-  // This must be the exact origin of your frontend application
-  origin: [
-    'http://localhost:5173', // Your Vite dev server
-    'https://veggie-help.vercel.app', // Production frontend
-  ],
-  // This is crucial for allowing cookies to be sent with requests
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true, 
 };
 
-// 3. Use the cors middleware with your options
 app.use(cors(corsOptions));
+
 app.use(express.json());
 app.use(cookieParser());
 app.use('/api', apiRoutes);
