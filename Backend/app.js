@@ -11,15 +11,26 @@ connectDB(); // Call the function to establish the connection
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({
-  origin: [
-    'http://localhost:5173', // Your Vite dev server
-    'https://veggie-help.vercel.app', // Production frontend
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true // If using cookies/auth tokens
-}));
+const allowedOrigins = [
+  'https://veggie-help.vercel.app', // Your live Vercel frontend URL
+  'http://localhost:5173' // Your local frontend for development
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true, 
+};
+
+app.use(cors(corsOptions));
+
 app.use(express.json());
 app.use(cookieParser());
 app.use('/api', apiRoutes);
