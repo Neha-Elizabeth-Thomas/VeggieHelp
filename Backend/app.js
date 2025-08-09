@@ -12,8 +12,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const allowedOrigins = [
-  'http://localhost:5173', // Your local frontend for development
-  'https://veggie-help.vercel.app' // Your live Vercel frontend URL
+  'https://veggie-help.vercel.app', // Your live Vercel frontend URL
+  'http://localhost:5173' // Your local frontend for development
 ];
 
 const corsOptions = {
